@@ -7,11 +7,13 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.core import callback
 
 from .backends import create_backend, get_backend_class
 from .backends.base import AuthenticationError, LibraryType
 from .const import CONF_ACCOUNT_NAME, CONF_BASE_URL, CONF_LIBRARY_TYPE, CONF_PASSWORD, CONF_USERNAME, DOMAIN
+from .ics import async_get_token, async_rotate_token, feed_urls
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,6 +56,11 @@ class StadtbibliothekConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Stadtbibliothek."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> StadtbibliothekOptionsFlow:
+        return StadtbibliothekOptionsFlow()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -100,4 +107,27 @@ class StadtbibliothekConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=STEP_USER_DATA_SCHEMA,
             errors=errors,
+        )
+
+
+class StadtbibliothekOptionsFlow(OptionsFlow):
+    """Shows the calendar subscription links; can replace their secret."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        if user_input is not None:
+            if not user_input.get("regenerate_token"):
+                return self.async_create_entry(data={})
+            await async_rotate_token(self.hass)
+            # Fall through: show the new links right away.
+
+        token = await async_get_token(self.hass)
+        urls = feed_urls(self.hass, token, self.config_entry.entry_id)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({vol.Optional("regenerate_token", default=False): bool}),
+            description_placeholders={
+                "all_url": urls["all"],
+                "account_url": urls["account"],
+                "account": self.config_entry.title,
+            },
         )

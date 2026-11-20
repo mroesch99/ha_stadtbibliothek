@@ -52,6 +52,7 @@ ha_core = _make_module(
     ServiceCall=ServiceCall,
     ServiceResponse=ServiceResponse,
     SupportsResponse=SupportsResponse,
+    callback=lambda func: func,
 )
 
 # --- homeassistant.config_entries ---
@@ -103,6 +104,25 @@ class ConfigFlow(metaclass=_ConfigFlowMeta):
         return ConfigFlowResult(type="create_entry", title=title, data=data)
 
 
+class OptionsFlow:
+    """Home Assistant sets hass and config_entry on the flow before step init."""
+
+    hass = None
+    config_entry = None
+
+    def async_show_form(self, *, step_id, data_schema, errors=None, description_placeholders=None):
+        return ConfigFlowResult(
+            type="form",
+            step_id=step_id,
+            data_schema=data_schema,
+            errors=errors or {},
+            description_placeholders=description_placeholders or {},
+        )
+
+    def async_create_entry(self, *, title="", data):
+        return ConfigFlowResult(type="create_entry", title=title, data=data)
+
+
 class ConfigEntry:
     def __init__(self, entry_id="test_entry_id", data=None, title="Test account"):
         self.entry_id = entry_id
@@ -115,6 +135,7 @@ ha_config_entries = _make_module(
     ConfigEntry=ConfigEntry,
     ConfigFlow=ConfigFlow,
     ConfigFlowResult=ConfigFlowResult,
+    OptionsFlow=OptionsFlow,
 )
 
 # --- homeassistant.helpers ---
@@ -267,6 +288,54 @@ class CalendarEvent:
 
 
 _make_module("homeassistant.components.calendar", CalendarEntity=CalendarEntity, CalendarEvent=CalendarEvent)
+
+# --- homeassistant.components.http / helpers.storage / helpers.network ---
+
+
+class HomeAssistantView:
+    url: str = ""
+    name: str = ""
+    requires_auth: bool = True
+
+
+class StaticPathConfig:
+    def __init__(self, url_path, path, cache_headers=True):
+        self.url_path, self.path, self.cache_headers = url_path, path, cache_headers
+
+
+_make_module("homeassistant.components.http", HomeAssistantView=HomeAssistantView, StaticPathConfig=StaticPathConfig)
+
+
+class Store:
+    """In-memory stand-in for homeassistant.helpers.storage.Store, kept on hass."""
+
+    def __init__(self, hass, version, key, **kwargs):
+        self._hass, self._key = hass, key
+        if not isinstance(getattr(hass, "_stub_store", None), dict):
+            hass._stub_store = {}
+
+    async def async_load(self):
+        return self._hass._stub_store.get(self._key)
+
+    async def async_save(self, data):
+        self._hass._stub_store[self._key] = data
+
+
+_make_module("homeassistant.helpers.storage", Store=Store)
+
+
+class NoURLAvailableError(Exception):
+    pass
+
+
+def _get_url(hass, **kwargs):
+    url = getattr(hass, "_stub_url", None)
+    if not isinstance(url, str):
+        raise NoURLAvailableError
+    return url
+
+
+_make_module("homeassistant.helpers.network", get_url=_get_url, NoURLAvailableError=NoURLAvailableError)
 
 # --- homeassistant.exceptions ---
 _make_module("homeassistant.exceptions", HomeAssistantError=Exception)

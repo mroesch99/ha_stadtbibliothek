@@ -21,5 +21,16 @@
         "abort": {
             "already_configured": "This account is already configured."
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Calendar subscription",
+                "description": "Subscribe to these links in any calendar app (Apple, Google, Outlook, Thunderbird). Anyone with a link can see the due dates and titles, so share it only with people you trust.\n\n**All accounts:**\n`{all_url}`\n\n**Only {account}:**\n`{account_url}`\n\nThe calendar app must be able to reach this address. Google Calendar fetches it from Google's servers, so Home Assistant must be reachable from the internet; if it sits behind a login proxy (e.g. Authelia), allow `/api/stadtbibliothek/ics/` without login.",
+                "data": {
+                    "regenerate_token": "Create new links (the old ones stop working)"
+                }
+            }
+        }
     }
 }

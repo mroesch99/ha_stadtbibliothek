@@ -23,6 +23,7 @@ try:
 
     from .const import DOMAIN
     from .coordinator import StadtbibliothekCoordinator
+    from .ics import IcsView
 
     _HAS_HOMEASSISTANT = True
 except ImportError:
@@ -115,12 +116,14 @@ def _get_coordinator(hass: HomeAssistant, config_entry_id: str) -> Stadtbiblioth
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up what is shared by all accounts, once, before any entry.
 
-    The dashboard card is registered here rather than per entry: an entry
-    whose first poll fails never finishes async_setup_entry, and the card
-    must still load then -- it shows which account is failing.
+    The dashboard card and the calendar feed are registered here rather
+    than per entry: an entry whose first poll fails never finishes
+    async_setup_entry, and both must still work then (the card shows which
+    account is failing; the feed serves the others).
     """
     _register_services(hass)
     await async_register_card(hass)
+    hass.http.register_view(IcsView(hass))
     return True
 
 

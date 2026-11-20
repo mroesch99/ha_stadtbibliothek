@@ -13,7 +13,7 @@ page like a browser would.
 > original library types Remseck (Koha) and Stuttgart (aDIS/BMS) remain available.
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5)](https://hacs.xyz)
-[![HA Version](https://img.shields.io/badge/HA-2024.7%2B-blue)](https://www.home-assistant.io)
+[![HA Version](https://img.shields.io/badge/HA-2024.11%2B-blue)](https://www.home-assistant.io)
 
 ## Features
 
@@ -24,6 +24,7 @@ page like a browser would.
 - Warning sensor (days until the earliest due date, overdue count) and fees sensor
 - **Renew single loans** (`stadtbibliothek.renew_loan`), or all due loans at once (`renew_all`)
 - **Calendar** per account with one all-day event per due date
+- **Calendar subscription (iCal/ICS)** for any calendar app: one combined feed for all accounts, plus one per account
 - **Dashboard card** with all accounts in one list and a renew button per item – served by the
   integration, no Lovelace resource needed
 - German and English UI
@@ -95,6 +96,30 @@ Each configured account creates three sensors and a calendar:
 
 One all-day event per due date (loans due on the same day are grouped), with the titles in the
 description and non-renewable ones marked. Overdue loans stay the calendar's current event.
+
+## Calendar subscription (iCal)
+
+Home Assistant cannot publish calendars to other apps, so the integration serves its own iCal feeds:
+
+- **All accounts:** `https://<home-assistant>/api/stadtbibliothek/ics/<secret>/alle.ics`
+- **One account:** `https://<home-assistant>/api/stadtbibliothek/ics/<secret>/<config_entry_id>.ics`
+
+Open **Settings → Devices & services → Bibliothek → (account) → Configure** to see both links ready
+to copy. Subscribe to them in Apple Calendar, Google Calendar ("From URL"), Outlook or Thunderbird.
+
+- One all-day event per due date; in the combined feed loans of all accounts due the same day are
+  one event ("Bibliothek: 3 Medien zurückgeben (Anna, Michael)") with the titles per account in the
+  description and non-renewable ones marked
+- Reminder at 18:00 the evening before (apps that ignore alarms in subscriptions skip it)
+- Stable event ids: renewals move items to another day's event instead of creating duplicates
+- Clients are asked to refresh hourly; Google Calendar refreshes subscriptions on its own schedule
+  (often every few hours)
+
+**Access:** the feed needs no Home Assistant login – calendar apps cannot log in – so the random
+secret in the URL is the only protection. Anyone with the link sees due dates and titles. The
+*Configure* dialog can create new links, which invalidates the old ones. Google Calendar fetches
+from Google's servers, so Home Assistant must be reachable from the internet; behind a login proxy
+(e.g. Authelia) allow `/api/stadtbibliothek/ics/` without login.
 
 ## Loans card with renew buttons
 

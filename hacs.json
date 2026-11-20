@@ -1,7 +1,7 @@
 {
   "name": "Bibliothek (Koha / LMSCloud)",
   "render_readme": true,
-  "homeassistant": "2024.7.0",
+  "homeassistant": "2024.11.0",
   "country": [
     "DE",
     "AT",

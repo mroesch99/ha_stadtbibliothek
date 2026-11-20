@@ -83,3 +83,19 @@ async def test_manifest_is_read_off_the_event_loop(monkeypatch):
     await async_register_card(hass)
 
     hass.async_add_executor_job.assert_awaited_once()
+
+
+async def test_ics_feed_view_is_registered_when_the_integration_loads(monkeypatch):
+    from custom_components.stadtbibliothek import async_setup
+    from custom_components.stadtbibliothek.ics import IcsView
+
+    _stub_frontend(monkeypatch)
+    hass = MagicMock()
+    hass.data = {}
+    hass.http.async_register_static_paths = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(return_value="1.0.0")
+
+    await async_setup(hass, {})
+
+    (view,) = hass.http.register_view.call_args.args
+    assert isinstance(view, IcsView)

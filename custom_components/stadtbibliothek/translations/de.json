@@ -21,5 +21,16 @@
         "abort": {
             "already_configured": "Dieses Konto ist bereits eingerichtet."
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Kalender-Abo",
+                "description": "Diese Links in einer Kalender-App abonnieren (Apple, Google, Outlook, Thunderbird). Wer einen Link hat, sieht Rückgabedaten und Titel – nur an Vertrauenspersonen weitergeben.\n\n**Alle Konten:**\n`{all_url}`\n\n**Nur {account}:**\n`{account_url}`\n\nDie Kalender-App muss diese Adresse erreichen. Google Kalender ruft sie von Googles Servern ab, Home Assistant muss dafür aus dem Internet erreichbar sein. Liegt es hinter einem Login-Proxy (z. B. Authelia), `/api/stadtbibliothek/ics/` ohne Login freigeben.",
+                "data": {
+                    "regenerate_token": "Neue Links erzeugen (die alten funktionieren dann nicht mehr)"
+                }
+            }
+        }
     }
 }

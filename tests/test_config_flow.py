@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.data_entry_flow import AbortFlow
 
 from custom_components.stadtbibliothek.backends.base import AuthenticationError
-from custom_components.stadtbibliothek.config_flow import StadtbibliothekConfigFlow
+from custom_components.stadtbibliothek.config_flow import (
+    StadtbibliothekConfigFlow,
+    StadtbibliothekOptionsFlow,
+)
 from custom_components.stadtbibliothek.const import (
     CONF_ACCOUNT_NAME,
     CONF_BASE_URL,
@@ -137,3 +141,49 @@ async def test_same_account_twice_aborts(flow):
     ):
         await flow.async_step_user(_user_input(library_type="koha", username="A123"))
     inst.login.assert_not_awaited()
+
+
+# --- options: calendar subscription links ------------------------------------
+
+
+def _options_flow():
+    hass = MagicMock()
+    hass.data = {}
+    hass._stub_url = "https://ha.example.net"
+    flow = StadtbibliothekOptionsFlow()
+    flow.hass = hass
+    flow.config_entry = SimpleNamespace(entry_id="e1", title="Michael")
+    return flow
+
+
+def test_config_flow_offers_options():
+    assert isinstance(StadtbibliothekConfigFlow.async_get_options_flow(MagicMock()), StadtbibliothekOptionsFlow)
+
+
+async def test_options_show_the_combined_and_the_account_feed():
+    flow = _options_flow()
+    result = await flow.async_step_init()
+    assert result["type"] == "form"
+    links = result["description_placeholders"]
+    token = flow.hass.data["stadtbibliothek_ics_token"]
+    assert links["all_url"] == f"https://ha.example.net/api/stadtbibliothek/ics/{token}/alle.ics"
+    assert links["account_url"] == f"https://ha.example.net/api/stadtbibliothek/ics/{token}/e1.ics"
+    assert links["account"] == "Michael"
+
+
+async def test_regenerating_shows_the_new_links_instead_of_closing():
+    """After a new secret the old links are dead -- the user needs the new
+    ones right away, so the form comes back instead of finishing."""
+    flow = _options_flow()
+    old = (await flow.async_step_init())["description_placeholders"]["all_url"]
+    result = await flow.async_step_init({"regenerate_token": True})
+    assert result["type"] == "form"
+    assert result["description_placeholders"]["all_url"] != old
+
+
+async def test_closing_without_regenerating_keeps_the_links():
+    flow = _options_flow()
+    old = (await flow.async_step_init())["description_placeholders"]["all_url"]
+    result = await flow.async_step_init({"regenerate_token": False})
+    assert result["type"] == "create_entry"
+    assert (await flow.async_step_init())["description_placeholders"]["all_url"] == old
