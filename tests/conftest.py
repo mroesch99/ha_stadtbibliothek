@@ -128,6 +128,11 @@ def _get_async_client(hass):
 
 _make_module("homeassistant.helpers.httpx_client", get_async_client=_get_async_client)
 
+_make_module(
+    "homeassistant.helpers.config_validation",
+    config_entry_only_config_schema=lambda domain: None,
+)
+
 # --- homeassistant.helpers.entity ---
 
 

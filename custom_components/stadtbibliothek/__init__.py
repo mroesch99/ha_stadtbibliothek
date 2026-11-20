@@ -18,6 +18,7 @@ try:
     from homeassistant.config_entries import ConfigEntry
     from homeassistant.const import Platform
     from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+    from homeassistant.helpers import config_validation as cv
     from homeassistant.helpers import entity_registry as er
 
     from .const import DOMAIN
@@ -28,6 +29,9 @@ except ImportError:
     _HAS_HOMEASSISTANT = False
 
 if _HAS_HOMEASSISTANT:
+    # Configured through the UI only; async_setup exists for shared setup.
+    CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
     PLATFORMS = [Platform.SENSOR, Platform.CALENDAR]
 
     SERVICE_RENEW_LOAN = "renew_loan"
@@ -103,6 +107,18 @@ def _get_coordinator(hass: HomeAssistant, config_entry_id: str) -> Stadtbiblioth
     return hass.data[DOMAIN][config_entry_id]
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up what is shared by all accounts, once, before any entry.
+
+    The dashboard card is registered here rather than per entry: an entry
+    whose first poll fails never finishes async_setup_entry, and the card
+    must still load then -- it shows which account is failing.
+    """
+    _register_services(hass)
+    await async_register_card(hass)
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Stadtbibliothek from a config entry."""
     coordinator = StadtbibliothekCoordinator(hass, entry)
@@ -111,9 +127,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    _register_services(hass)
-    await async_register_card(hass)
 
     return True
 

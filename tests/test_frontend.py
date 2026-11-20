@@ -47,3 +47,22 @@ async def test_card_is_served_and_announced_once(monkeypatch):
     frontend.add_extra_js_url.assert_called_once()
     announced = frontend.add_extra_js_url.call_args.args[1]
     assert announced.startswith(f"{CARD_URL}?v=")
+
+
+async def test_card_is_registered_when_the_integration_loads(monkeypatch):
+    """The card must not depend on an account's first poll succeeding.
+
+    Registering it from async_setup_entry *after* the first refresh meant a
+    single failed login (ConfigEntryNotReady) left every dashboard with
+    "Custom element doesn't exist" -- exactly when the user most needs to
+    see what is going on.
+    """
+    from custom_components.stadtbibliothek import async_setup
+
+    _stub_frontend(monkeypatch)
+    hass = MagicMock()
+    hass.data = {}
+    hass.http.async_register_static_paths = AsyncMock()
+
+    assert await async_setup(hass, {}) is True
+    hass.http.async_register_static_paths.assert_awaited_once()
