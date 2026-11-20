@@ -21,7 +21,7 @@ except ImportError:
     _HAS_HOMEASSISTANT = False
 
 if _HAS_HOMEASSISTANT:
-    PLATFORMS = [Platform.SENSOR]
+    PLATFORMS = [Platform.SENSOR, Platform.CALENDAR]
 
     SERVICE_RENEW_LOAN = "renew_loan"
     SERVICE_RENEW_ALL = "renew_all"

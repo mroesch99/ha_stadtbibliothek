@@ -26,6 +26,7 @@ def _make_module(name: str, **attrs) -> ModuleType:
 # --- homeassistant.const ---
 class Platform:
     SENSOR = "sensor"
+    CALENDAR = "calendar"
 
 
 ha_const = _make_module(
@@ -242,6 +243,25 @@ _make_module(
     SensorEntity=SensorEntity,
     SensorDeviceClass=SensorDeviceClass,
 )
+
+# --- homeassistant.components.calendar ---
+
+
+class CalendarEntity:
+    pass
+
+
+class CalendarEvent:
+    def __init__(self, *, start, end, summary, description=None, location=None, uid=None):
+        self.start = start
+        self.end = end
+        self.summary = summary
+        self.description = description
+        self.location = location
+        self.uid = uid
+
+
+_make_module("homeassistant.components.calendar", CalendarEntity=CalendarEntity, CalendarEvent=CalendarEvent)
 
 # --- homeassistant.exceptions ---
 _make_module("homeassistant.exceptions", HomeAssistantError=Exception)

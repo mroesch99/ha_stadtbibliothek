@@ -10,7 +10,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .backends.base import AccountInfo
+from .backends.base import AccountInfo, LibraryType
 from .const import CONF_LIBRARY_TYPE, CONF_USERNAME, DOMAIN
 from .coordinator import StadtbibliothekCoordinator
 from .serializers import serialize_fee, serialize_loan
@@ -34,8 +34,25 @@ async def async_setup_entry(
     )
 
 
-def _slug(lib_type: str, username: str) -> str:
+def slug(lib_type: str, username: str) -> str:
     return f"{lib_type}_{username}".lower().replace(" ", "_")
+
+
+def device_info(config_entry: ConfigEntry, lib_type: str, username: str) -> DeviceInfo:
+    """One device per library account, shared by all its entities.
+
+    Koha entries are named after their account (e.g. a family member), which
+    then also names their entities: sensor.bibliothek_michael_loans.
+    """
+    if lib_type == LibraryType.KOHA.value:
+        name = f"Bibliothek {config_entry.title}"
+    else:
+        name = f"Stadtbibliothek {lib_type} {username}"
+    return DeviceInfo(
+        identifiers={(DOMAIN, config_entry.entry_id)},
+        name=name,
+        entry_type=DeviceEntryType.SERVICE,
+    )
 
 
 class StadtbibliothekEntity(CoordinatorEntity[StadtbibliothekCoordinator], SensorEntity):
@@ -52,12 +69,10 @@ class StadtbibliothekEntity(CoordinatorEntity[StadtbibliothekCoordinator], Senso
     ) -> None:
         super().__init__(coordinator)
         self._lib_type = lib_type
-        self._slug = _slug(lib_type, username)
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, config_entry.entry_id)},
-            name=f"Stadtbibliothek {lib_type} {username}",
-            entry_type=DeviceEntryType.SERVICE,
-        )
+        self._slug = slug(lib_type, username)
+        self._account_name = config_entry.title
+        self._config_entry_id = config_entry.entry_id
+        self._attr_device_info = device_info(config_entry, lib_type, username)
 
     @property
     def _account(self) -> AccountInfo | None:
@@ -87,6 +102,8 @@ class LoansSensor(StadtbibliothekEntity):
             return {}
         library = self._lib_type.capitalize()
         return {
+            "account": self._account_name,
+            "config_entry_id": self._config_entry_id,
             "loans": [{**serialize_loan(loan), "library": library} for loan in self._account.loans],
         }
 

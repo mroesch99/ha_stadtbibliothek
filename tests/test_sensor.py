@@ -174,3 +174,25 @@ class TestFeesSensor:
     def test_unique_id(self, sample_account):
         sensor = _make_sensor(FeesSensor, sample_account)
         assert sensor._attr_unique_id == f"{DOMAIN}_remseck_testuser_fees"
+
+
+def test_loans_attributes_name_the_account(sample_account):
+    """The combined dashboard card lists four cards' loans together; it needs
+    to say whose each one is, and which entry to send a renewal to."""
+    coordinator = MagicMock()
+    coordinator.data = sample_account
+    config_entry = MagicMock()
+    config_entry.entry_id = "entry_42"
+    config_entry.title = "Michael"
+    sensor = LoansSensor(coordinator, config_entry, "koha", "A123")
+    attrs = sensor.extra_state_attributes
+    assert attrs["account"] == "Michael"
+    assert attrs["config_entry_id"] == "entry_42"
+
+
+def test_koha_device_is_named_after_the_account():
+    config_entry = MagicMock()
+    config_entry.entry_id = "e"
+    config_entry.title = "Michael"
+    sensor = LoansSensor(MagicMock(), config_entry, "koha", "A123")
+    assert sensor._attr_device_info["name"] == "Bibliothek Michael"
