@@ -17,7 +17,7 @@ dependencies = [
 include = ["custom_components*"]
 
 [tool.setuptools.package-data]
-"custom_components.stadtbibliothek" = ["manifest.json", "services.yaml", "strings.json"]
+"custom_components.stadtbibliothek" = ["manifest.json", "services.yaml", "strings.json", "translations/*.json", "frontend/*.js"]
 
 [project.scripts]
 stadtbibliothek-remseck = "custom_components.stadtbibliothek.cli_remseck:main"

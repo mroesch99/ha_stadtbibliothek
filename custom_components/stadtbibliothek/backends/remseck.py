@@ -242,6 +242,18 @@ class RemseckBackend(LibraryBackend):
         )
 
 
+class KohaBackend(RemseckBackend):
+    """Any Koha/LMSCloud OPAC, addressed by ``base_url``.
+
+    Remseck's parser reads stock Koha markup, so the only thing another
+    library needs is its own host. The default is the Stadtbibliothek
+    Neumarkt, the library this type was added for.
+    """
+
+    library_type = LibraryType.KOHA
+    BASE_URL = "https://sb-neumarkt.lmscloud.net"
+
+
 def _extract_itemnumber(row: Tag) -> str:
     """Extract itemnumber from the renew checkbox or link in the renew cell.
 

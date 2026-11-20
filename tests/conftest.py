@@ -72,9 +72,28 @@ class _ConfigFlowMeta(type):
         return cls
 
 
+class AbortFlow(Exception):
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+_make_module("homeassistant.data_entry_flow", AbortFlow=AbortFlow)
+
+
 class ConfigFlow(metaclass=_ConfigFlowMeta):
     DOMAIN: str | None = None
     hass = MagicMock()
+    unique_id: str | None = None
+    #: Unique ids of entries that already exist; tests set this to simulate them.
+    _configured_unique_ids: set[str] = frozenset()
+
+    async def async_set_unique_id(self, unique_id=None):
+        self.unique_id = unique_id
+
+    def _abort_if_unique_id_configured(self):
+        if self.unique_id in self._configured_unique_ids:
+            raise AbortFlow("already_configured")
 
     def async_show_form(self, *, step_id, data_schema, errors=None):
         return ConfigFlowResult(type="form", step_id=step_id, data_schema=data_schema, errors=errors or {})
@@ -84,9 +103,10 @@ class ConfigFlow(metaclass=_ConfigFlowMeta):
 
 
 class ConfigEntry:
-    def __init__(self, entry_id="test_entry_id", data=None):
+    def __init__(self, entry_id="test_entry_id", data=None, title="Test account"):
         self.entry_id = entry_id
         self.data = data or {}
+        self.title = title
 
 
 ha_config_entries = _make_module(

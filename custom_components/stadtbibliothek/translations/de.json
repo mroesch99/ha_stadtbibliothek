@@ -1,0 +1,25 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Stadtbibliothek einrichten",
+                "description": "Zugangsdaten des Bibliothekskontos eingeben. Die URL wird nur für „Koha / LMSCloud“ verwendet (Standard: Stadtbibliothek Neumarkt).",
+                "data": {
+                    "library_type": "Bibliothek",
+                    "base_url": "OPAC-URL (nur Koha / LMSCloud)",
+                    "account_name": "Kontoname (optional, z. B. Familienmitglied)",
+                    "username": "Benutzername / Ausweisnummer",
+                    "password": "Passwort / PIN"
+                }
+            }
+        },
+        "error": {
+            "invalid_auth": "Ungültige Zugangsdaten. Bitte Ausweisnummer und Passwort prüfen.",
+            "cannot_connect": "Die Bibliothek ist nicht erreichbar. Bitte später erneut versuchen.",
+            "invalid_url": "Das ist keine gültige URL."
+        },
+        "abort": {
+            "already_configured": "Dieses Konto ist bereits eingerichtet."
+        }
+    }
+}

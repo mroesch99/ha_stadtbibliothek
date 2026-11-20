@@ -51,7 +51,7 @@ def test_get_backend_class_rejects_unknown_name():
 
 
 def test_available_backends_is_sorted():
-    assert available_backends() == ["remseck", "stuttgart"]
+    assert available_backends() == ["koha", "remseck", "stuttgart"]
 
 
 async def test_create_backend_returns_an_instance():
@@ -89,7 +89,7 @@ def test_backends_import_without_homeassistant():
         "        return self.find_module(name, path)\n"
         "sys.meta_path.insert(0, Blocker())\n"
         "from custom_components.stadtbibliothek.backends import BACKENDS, create_backend\n"
-        "assert set(BACKENDS) == {'remseck', 'stuttgart'}\n"
+        "assert set(BACKENDS) == {'koha', 'remseck', 'stuttgart'}\n"
         "assert 'homeassistant' not in sys.modules\n"
     )
     result = subprocess.run(

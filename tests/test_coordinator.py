@@ -14,6 +14,7 @@ from custom_components.stadtbibliothek.backends.base import (
     ParseError,
 )
 from custom_components.stadtbibliothek.const import (
+    CONF_BASE_URL,
     CONF_LIBRARY_TYPE,
     CONF_PASSWORD,
     CONF_USERNAME,
@@ -277,3 +278,44 @@ async def test_update_data_skips_details_when_unadvertised(mock_backend):
         await coordinator._async_update_data()
 
     mock_backend.fetch_details.assert_not_awaited()
+
+
+async def test_backend_is_closed_after_update(mock_backend):
+    coordinator = _make_coordinator()
+    with patch.object(coordinator, "_create_backend", return_value=mock_backend):
+        await coordinator._async_update_data()
+    mock_backend.close.assert_awaited_once()
+
+
+async def test_backend_is_closed_when_update_fails(mock_backend):
+    coordinator = _make_coordinator()
+    mock_backend.login = AsyncMock(side_effect=AuthenticationError("bad"))
+    with patch.object(coordinator, "_create_backend", return_value=mock_backend), pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+    mock_backend.close.assert_awaited_once()
+
+
+async def test_backend_is_closed_after_renewal(mock_backend):
+    coordinator = _make_coordinator()
+    with (
+        patch.object(coordinator, "_create_backend", return_value=mock_backend),
+        patch.object(coordinator, "async_request_refresh", new_callable=AsyncMock),
+    ):
+        await coordinator.renew_loan("12345")
+    mock_backend.close.assert_awaited_once()
+
+
+async def test_koha_entry_passes_its_base_url_to_the_backend():
+    hass = MagicMock()
+    entry = MagicMock()
+    entry.data = {
+        CONF_LIBRARY_TYPE: "koha",
+        CONF_USERNAME: "u",
+        CONF_PASSWORD: "p",
+        CONF_BASE_URL: "https://example.lmscloud.net",
+    }
+    coordinator = StadtbibliothekCoordinator(hass, entry)
+    factory = AsyncMock()
+    with patch("custom_components.stadtbibliothek.coordinator.create_backend", factory):
+        await coordinator._create_backend()
+    factory.assert_awaited_once_with("koha", base_url="https://example.lmscloud.net")

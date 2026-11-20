@@ -18,6 +18,8 @@ _LOGGER = logging.getLogger(__name__)
 class LibraryType(str, Enum):
     REMSECK = "remseck"
     STUTTGART = "stuttgart"
+    #: Any Koha/LMSCloud OPAC; the host comes from the config entry.
+    KOHA = "koha"
 
 
 @dataclass

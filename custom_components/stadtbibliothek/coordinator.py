@@ -11,7 +11,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .backends import create_backend
 from .backends.base import AccountInfo, AuthenticationError, LibraryBackend, LibraryType, ParseError
-from .const import CONF_LIBRARY_TYPE, CONF_PASSWORD, CONF_USERNAME, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import CONF_BASE_URL, CONF_LIBRARY_TYPE, CONF_PASSWORD, CONF_USERNAME, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,10 +32,11 @@ class StadtbibliothekCoordinator(DataUpdateCoordinator[AccountInfo]):
         self._library_type = config_entry.data[CONF_LIBRARY_TYPE]
         self._username = config_entry.data[CONF_USERNAME]
         self._password = config_entry.data[CONF_PASSWORD]
+        self._base_url: str | None = config_entry.data.get(CONF_BASE_URL)
         self.refresh_required: bool = False
 
     async def _create_backend(self) -> LibraryBackend:
-        return await create_backend(self._library_type)
+        return await create_backend(self._library_type, base_url=self._base_url)
 
     async def _async_update_data(self) -> AccountInfo:
         self.refresh_required = False
@@ -69,6 +70,10 @@ class StadtbibliothekCoordinator(DataUpdateCoordinator[AccountInfo]):
             raise UpdateFailed(f"Unexpected page layout: {err}") from err
         except Exception as err:
             raise UpdateFailed(f"Error fetching data: {err}") from err
+        finally:
+            # Each poll builds its own client; without this every poll leaks
+            # one (and its connection pool) until garbage collection.
+            await backend.close()
 
     async def renew_loan(self, item_id: str) -> bool:
         """Renew a single loan by item ID."""
@@ -76,11 +81,13 @@ class StadtbibliothekCoordinator(DataUpdateCoordinator[AccountInfo]):
         try:
             await backend.login(self._username, self._password)
             result = await backend.renew_loan(item_id)
-            self.refresh_required = True
-            await self.async_request_refresh()
-            return result
         except Exception as err:
             raise UpdateFailed(f"Error renewing loan: {err}") from err
+        finally:
+            await backend.close()
+        self.refresh_required = True
+        await self.async_request_refresh()
+        return result
 
     async def renew_all(self, days_remaining_threshold: int = 14) -> dict:
         """Renew all renewable loans, returning per-item results."""
@@ -95,6 +102,7 @@ class StadtbibliothekCoordinator(DataUpdateCoordinator[AccountInfo]):
         try:
             await backend.login(self._username, self._password)
         except Exception as err:
+            await backend.close()
             raise UpdateFailed(f"Error renewing loans: {err}") from err
 
         results: list[dict] = []
@@ -122,6 +130,7 @@ class StadtbibliothekCoordinator(DataUpdateCoordinator[AccountInfo]):
             )
             if ok:
                 renewed += 1
+        await backend.close()
 
         self.refresh_required = True
         await self.async_request_refresh()

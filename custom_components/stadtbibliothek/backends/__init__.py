@@ -21,12 +21,13 @@ from .base import (
     RateLimitedError,
     RenewalError,
 )
-from .remseck import RemseckBackend
+from .remseck import KohaBackend, RemseckBackend
 from .stuttgart import StuttgartBackend
 
 BACKENDS: dict[str, type[LibraryBackend]] = {
     LibraryType.REMSECK.value: RemseckBackend,
     LibraryType.STUTTGART.value: StuttgartBackend,
+    LibraryType.KOHA.value: KohaBackend,
 }
 
 
@@ -66,6 +67,7 @@ __all__ = [
     "AccountInfo",
     "AuthenticationError",
     "FeeItem",
+    "KohaBackend",
     "LibraryBackend",
     "LibraryType",
     "LoanItem",
