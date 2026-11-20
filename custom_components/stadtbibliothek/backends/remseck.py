@@ -221,6 +221,7 @@ class RemseckBackend(LibraryBackend):
             can_be_renewed=can_be_renewed,
             times_renewed=times_renewed,
             max_renewals=max_renewals,
+            renew_not_before=no_renewal_before,
             cover_url=cover_url,
             detail_url=detail_url,
         )

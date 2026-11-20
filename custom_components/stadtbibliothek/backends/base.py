@@ -34,6 +34,9 @@ class LoanItem:
     can_be_renewed: bool = True
     times_renewed: int = 0
     max_renewals: int | None = None
+    #: Earliest date the OPAC will accept a renewal, when it says so
+    #: (Koha: "Keine Verlängerung vor ..."). None when not stated.
+    renew_not_before: date | None = None
     call_number: str | None = None
     #: Exemplar barcode, when the OPAC exposes one. Stuttgart prints it for
     #: books but not for CDs/DVDs/games; Koha does not show it at all.

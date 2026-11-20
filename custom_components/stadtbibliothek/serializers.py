@@ -12,7 +12,7 @@ from .backends.base import FeeItem, LoanItem
 def serialize_loan(loan: LoanItem) -> dict[str, Any]:
     """Serialize a LoanItem including computed properties and ISO date strings."""
     d = dataclasses.asdict(loan)
-    for key in ("due_date", "checkout_date"):
+    for key in ("due_date", "checkout_date", "renew_not_before"):
         if isinstance(d.get(key), date):
             d[key] = d[key].isoformat()
     d["days_remaining"] = loan.days_remaining

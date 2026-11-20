@@ -49,3 +49,19 @@ async def test_koha_requests_go_to_the_configured_host():
 
     assert login.called and page.called
     assert loans
+
+
+@respx.mock
+async def test_rows_carry_the_earliest_renewal_date():
+    """Koha prints 'Keine Verlängerung vor DD.MM.YYYY' on loans renewed too
+    recently; the dashboard shows that date instead of a dead button."""
+    from datetime import date
+
+    html = (FIXTURES / "recorded" / "remseck_checkouts.html").read_text()
+    respx.get(f"{NEUMARKT}/cgi-bin/koha/opac-user.pl").mock(return_value=httpx.Response(200, html=html))
+    backend = await create_backend(LibraryType.KOHA.value)
+    try:
+        loans = await backend.get_loans()
+    finally:
+        await backend.close()
+    assert {loan.renew_not_before for loan in loans} == {date(2026, 10, 19), None}

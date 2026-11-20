@@ -1,6 +1,7 @@
 # Stadtbibliothek -- Home Assistant Integration
 
-Custom component for Stuttgart and Remseck public library accounts.
+Custom component for Stuttgart, Remseck and any other Koha/LMSCloud public library account
+(e.g. Stadtbibliothek Neumarkt).
 
 [![CI](https://github.com/makefu/ha_stadtbibliothek/actions/workflows/ci.yml/badge.svg)](https://github.com/makefu/ha_stadtbibliothek/actions/workflows/ci.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5)](https://hacs.xyz)
@@ -14,7 +15,10 @@ Custom component for Stuttgart and Remseck public library accounts.
 - Loan renewal services with structured response data (per-item success/failure)
 - Services accept `entity_id` — no need to look up `config_entry_id`
 - Standalone CLI tools (`stadtbibliothek-remseck`, `stadtbibliothek-stuttgart`)
-- Supports Stuttgart (aDIS/BMS) and Remseck (Koha/LMSCloud)
+- Supports Stuttgart (aDIS/BMS), Remseck (Koha/LMSCloud) and **any Koha/LMSCloud OPAC** via a configurable URL
+- Optional account name per entry (e.g. one per family member)
+- Calendar entity per account with one all-day event per due date
+- Built-in dashboard card listing all accounts' loans with a renew button per item (no Lovelace resource needed)
 
 ## Installation
 
@@ -33,9 +37,14 @@ Copy `custom_components/stadtbibliothek/` into your Home Assistant `config/custo
 
 1. Go to **Settings -> Integrations -> Add Integration**
 2. Search for **Stadtbibliothek**
-3. Select library type: Remseck (Koha) or Stuttgart (aDIS)
-4. Enter your library card number and password
-5. Repeat to add multiple accounts
+3. Select library type: **Koha / LMSCloud (eigene URL)**, Remseck (Koha) or Stuttgart (aDIS)
+4. For Koha / LMSCloud: enter the OPAC URL (default `https://sb-neumarkt.lmscloud.net`; a pasted
+   `…/cgi-bin/koha/opac-user.pl` address is fine) and optionally an account name such as `Michael`
+5. Enter your library card number and password
+6. Repeat to add multiple accounts (the same card cannot be added twice)
+
+Koha entries with an account name get readable entity ids, e.g. `sensor.bibliothek_michael_loans`
+and `calendar.bibliothek_michael_ruckgaben`.
 
 ## Sensors
 
@@ -62,6 +71,32 @@ Each configured account creates three sensors:
 - **Attributes:**
   - `fee_items` -- list of individual fee entries
 
+
+### Calendar (`calendar.*_ruckgaben`)
+
+One all-day event per due date (loans due on the same day are grouped), with the titles in the
+description and non-renewable ones marked. Overdue loans stay the calendar's current event.
+
+## Loans card with renew buttons
+
+The integration serves its own card, so after installing and restarting it is available in the
+card picker as **"Bibliothek – Ausleihen"**:
+
+```yaml
+type: custom:stadtbibliothek-loans-card
+title: Bibliothek            # optional
+entities:                    # optional, default: all library accounts
+  - sensor.bibliothek_michael_loans
+warn_days: 7                 # optional
+urgent_days: 3               # optional
+show_covers: false           # optional
+```
+
+It merges all accounts into one list sorted by due date, colour-coded (overdue / urgent / soon / ok),
+with filter chips per account. Each loan Koha would renew gets a **Verlängern** button (with a
+confirmation prompt) that calls `stadtbibliothek.renew_loan` for the right account; otherwise the
+card says why not (`verlängerbar ab …`, `keine Verlängerung mehr`). The refresh button triggers
+`force_update` on all accounts.
 
 ## Dashboard example
 

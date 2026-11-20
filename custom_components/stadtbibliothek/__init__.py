@@ -2,9 +2,16 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 
 _LOGGER = logging.getLogger(__name__)
+
+_FRONTEND_DIR = Path(__file__).parent / "frontend"
+CARD_FILE = "stadtbibliothek-loans-card.js"
+CARD_URL = f"/stadtbibliothek_static/{CARD_FILE}"
+_CARD_REGISTERED = "stadtbibliothek_card_registered"
 
 try:
     import voluptuous as vol
@@ -51,6 +58,27 @@ if _HAS_HOMEASSISTANT:
     )
 
 
+async def async_register_card(hass: HomeAssistant) -> None:
+    """Serve the dashboard card and load it on every dashboard (once per HA run).
+
+    Done from the integration because HACS does not create Lovelace
+    resources for integrations; this way the card needs no manual setup.
+    """
+    if hass.data.get(_CARD_REGISTERED):
+        return
+    hass.data[_CARD_REGISTERED] = True
+
+    from homeassistant.components.frontend import add_extra_js_url
+    from homeassistant.components.http import StaticPathConfig
+
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(CARD_URL, str(_FRONTEND_DIR / CARD_FILE), cache_headers=False)]
+    )
+    # Version in the query string so browsers drop a cached copy on update.
+    version = json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
+    add_extra_js_url(hass, f"{CARD_URL}?v={version}")
+
+
 def _resolve_config_entry_id(hass: HomeAssistant, call_data: dict) -> str:
     config_entry_id = call_data.get("config_entry_id")
     entity_id = call_data.get("entity_id")
@@ -85,6 +113,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     _register_services(hass)
+    await async_register_card(hass)
 
     return True
 
