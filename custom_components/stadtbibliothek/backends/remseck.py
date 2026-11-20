@@ -179,7 +179,8 @@ class RemseckBackend(LibraryBackend):
         title = _title_text(title_tag)
 
         author = _cell_text(row, "td.author")
-        item_id = _extract_itemnumber(row) or _extract_biblionumber(title_tag)
+        itemnumber = _extract_itemnumber(row)
+        item_id = itemnumber or _extract_biblionumber(title_tag)
         media_type = _cell_text(row, "td.itype")
         call_number = _cell_text(row, "td.call_no")
         library_branch = _cell_text(row, "td.branch")
@@ -196,8 +197,14 @@ class RemseckBackend(LibraryBackend):
         no_renewal_before = _parse_no_renewal_before(row)
         renewals_disabled = _is_renewals_disabled(row)
 
+        # Koha renders the renew control (checkbox/link carrying the
+        # itemnumber) only for a loan it would accept a renewal for, and
+        # opac-renew.pl takes nothing else. Without it the row is not
+        # renewable *now*, whatever the counters say -- e.g. a "no renewal
+        # before" date that has passed since the page was rendered.
         can_be_renewed = (
-            times_renewed < max_renewals
+            bool(itemnumber)
+            and times_renewed < max_renewals
             and not renewals_disabled
             and (no_renewal_before is None or date.today() >= no_renewal_before)
         )
