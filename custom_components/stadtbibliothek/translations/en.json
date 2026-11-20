@@ -2,7 +2,7 @@
     "config": {
         "step": {
             "user": {
-                "title": "Set up Stadtbibliothek",
+                "title": "Set up library account",
                 "description": "Enter your library credentials. The URL is only used for \"Koha / LMSCloud\" (default: Stadtbibliothek Neumarkt).",
                 "data": {
                     "library_type": "Library",

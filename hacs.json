@@ -1,6 +1,10 @@
 {
-  "name": "Stadtbibliotheken Stuttgart und Remseck",
+  "name": "Bibliothek (Koha / LMSCloud)",
   "render_readme": true,
-  "homeassistant": "2024.1.0",
-  "country": [ "DE" ]
+  "homeassistant": "2024.7.0",
+  "country": [
+    "DE",
+    "AT",
+    "CH"
+  ]
 }

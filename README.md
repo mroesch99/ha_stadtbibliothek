@@ -1,24 +1,32 @@
-# Stadtbibliothek -- Home Assistant Integration
+# Bibliothek (Koha / LMSCloud) – Home Assistant Integration
 
-Custom component for Stuttgart, Remseck and any other Koha/LMSCloud public library account
-(e.g. Stadtbibliothek Neumarkt).
+Generic Home Assistant connector for libraries running the **Koha** library system – including
+every **LMSCloud**-hosted OPAC (`https://<library>.lmscloud.net`, e.g. Stadtbibliothek Neumarkt).
+It logs into the library's web OPAC with your card number and password, reads your loans and
+renews them on request. Several cards (e.g. the whole family) are shown together.
 
-[![CI](https://github.com/makefu/ha_stadtbibliothek/actions/workflows/ci.yml/badge.svg)](https://github.com/makefu/ha_stadtbibliothek/actions/workflows/ci.yml)
+Koha's REST API does not expose a patron's own loans, so the integration reads the OPAC account
+page like a browser would.
+
+> Fork of [makefu/ha_stadtbibliothek](https://github.com/makefu/ha_stadtbibliothek), extended with
+> a configurable Koha URL, a due-date calendar and a dashboard card with renew buttons. The
+> original library types Remseck (Koha) and Stuttgart (aDIS/BMS) remain available.
+
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5)](https://hacs.xyz)
-[![HA Version](https://img.shields.io/badge/HA-2024.1%2B-blue)](https://www.home-assistant.io)
+[![HA Version](https://img.shields.io/badge/HA-2024.7%2B-blue)](https://www.home-assistant.io)
 
 ## Features
 
-- Loan overview for multiple library accounts with `library` field for identification
-- Warning sensor (days until earliest due date, overdue detection)
-- Fee tracking
-- Loan renewal services with structured response data (per-item success/failure)
-- Services accept `entity_id` — no need to look up `config_entry_id`
-- Standalone CLI tools (`stadtbibliothek-remseck`, `stadtbibliothek-stuttgart`)
-- Supports Stuttgart (aDIS/BMS), Remseck (Koha/LMSCloud) and **any Koha/LMSCloud OPAC** via a configurable URL
-- Optional account name per entry (e.g. one per family member)
-- Calendar entity per account with one all-day event per due date
-- Built-in dashboard card listing all accounts' loans with a renew button per item (no Lovelace resource needed)
+- **Any Koha / LMSCloud library** via a configurable OPAC URL
+- Multiple library cards, each with an optional account name (e.g. one per family member)
+- Loans sensor with full details per item: title, author, media type, due date, days remaining,
+  renewable or not, renewals left, earliest renewal date, cover, ISBN
+- Warning sensor (days until the earliest due date, overdue count) and fees sensor
+- **Renew single loans** (`stadtbibliothek.renew_loan`), or all due loans at once (`renew_all`)
+- **Calendar** per account with one all-day event per due date
+- **Dashboard card** with all accounts in one list and a renew button per item – served by the
+  integration, no Lovelace resource needed
+- German and English UI
 
 ## Installation
 
@@ -26,8 +34,8 @@ Custom component for Stuttgart, Remseck and any other Koha/LMSCloud public libra
 
 1. Open HACS in Home Assistant
 2. Click the three dots menu -> Custom repositories
-3. Add `https://github.com/makefu/ha_stadtbibliothek` as an Integration
-4. Search for "Stadtbibliothek" and install
+3. Add `https://github.com/mroesch99/ha_stadtbibliothek` as an Integration
+4. Search for "Bibliothek (Koha / LMSCloud)", download, restart Home Assistant
 
 ### Manual
 
@@ -36,27 +44,38 @@ Copy `custom_components/stadtbibliothek/` into your Home Assistant `config/custo
 ## Configuration
 
 1. Go to **Settings -> Integrations -> Add Integration**
-2. Search for **Stadtbibliothek**
-3. Select library type: **Koha / LMSCloud (eigene URL)**, Remseck (Koha) or Stuttgart (aDIS)
-4. For Koha / LMSCloud: enter the OPAC URL (default `https://sb-neumarkt.lmscloud.net`; a pasted
-   `…/cgi-bin/koha/opac-user.pl` address is fine) and optionally an account name such as `Michael`
+2. Search for **Bibliothek (Koha / LMSCloud)**
+3. Select library type **Koha / LMSCloud (eigene URL)** (Remseck and Stuttgart are kept as presets)
+4. Enter your library's OPAC URL, e.g. `https://sb-neumarkt.lmscloud.net` (the default). A pasted
+   address such as `…/cgi-bin/koha/opac-user.pl` is fine. Optionally add an account name such as `Michael`
 5. Enter your library card number and password
 6. Repeat to add multiple accounts (the same card cannot be added twice)
 
-Koha entries with an account name get readable entity ids, e.g. `sensor.bibliothek_michael_loans`
-and `calendar.bibliothek_michael_ruckgaben`.
+Entries with an account name get readable entity ids, e.g. `sensor.bibliothek_michael_loans`
+and `calendar.bibliothek_michael_ruckgaben`. Without a name the card number is used.
+
+The integration domain stays `stadtbibliothek` (as in the original) so services are called
+`stadtbibliothek.*`.
+
+### Which libraries work?
+
+Any Koha OPAC whose login is a plain card number + password form at
+`/cgi-bin/koha/opac-user.pl` – this is the default for LMSCloud-hosted libraries in Germany.
+Libraries that log in via an external single sign-on (Shibboleth, CAS) are not supported.
 
 ## Sensors
 
-Each configured account creates three sensors:
+Each configured account creates three sensors and a calendar:
 
-### Loans (`sensor.stadtbibliothek_*_loans`)
+### Loans (`sensor.*_loans`)
 
 - **State:** number of active loans
 - **Attributes:**
-  - `loans` -- list of loan objects containing: `title`, `item_id`, `due_date`, `can_be_renewed`, `days_remaining`, `is_overdue`, `library` (e.g. "Remseck", "Stuttgart"), plus optional fields like `author`, `checkout_date`, `media_type`, `library_branch`, `times_renewed`, `max_renewals`, `renewals_left`, `call_number`, `barcode`, `publisher`, `isbn`, `cover_url`, `detail_url`
+  - `account` -- the account name (entry title)
+  - `config_entry_id` -- the entry to address in service calls
+  - `loans` -- list of loan objects containing: `title`, `item_id`, `due_date`, `can_be_renewed`, `days_remaining`, `is_overdue`, `library` (e.g. "Koha"), plus optional fields like `author`, `checkout_date`, `media_type`, `library_branch`, `times_renewed`, `max_renewals`, `renewals_left`, `renew_not_before`, `call_number`, `barcode`, `publisher`, `isbn`, `cover_url`, `detail_url`
 
-### Warning (`sensor.stadtbibliothek_*_warning`)
+### Warning (`sensor.*_warning`)
 
 - **State:** days until earliest due date (negative = overdue), `none` if no loans
 - **Attributes:**
@@ -65,7 +84,7 @@ Each configured account creates three sensors:
   - `earliest_due_date` -- ISO date of earliest due item
   - `refresh_required` -- bool, indicates a manual HA refresh is recommended after renewals
 
-### Fees (`sensor.stadtbibliothek_*_fees`)
+### Fees (`sensor.*_fees`)
 
 - **State:** total outstanding fees in EUR
 - **Attributes:**
@@ -98,9 +117,9 @@ confirmation prompt) that calls `stadtbibliothek.renew_loan` for the right accou
 card says why not (`verlängerbar ab …`, `keine Verlängerung mehr`). The refresh button triggers
 `force_update` on all accounts.
 
-## Dashboard example
+## Alternative dashboard example (read-only)
 
-[`examples/books-lent-dashboard/`](examples/books-lent-dashboard/) ships a
+[`examples/books-lent-dashboard/`](examples/books-lent-dashboard/) (from the original project) ships a
 ready-made Lovelace setup: a full-width panel dashboard with a small custom
 card (`books-lent-card.js`) that turns the `loans` attributes of all accounts
 into one color-coded table — cover images, due dates, remaining renewals,
@@ -112,12 +131,12 @@ batch. See its README for the two-line install.
 
 ### `stadtbibliothek.renew_loan`
 
-Renew a specific item by its barcode/item ID.
+Renew a specific item by its `item_id` (Koha itemnumber, from the `loans` attribute).
 
 | Field | Description |
 |-------|-------------|
-| `entity_id` | Any Stadtbibliothek sensor entity (e.g. `sensor.stadtbibliothek_remseck_12345_loans`) |
-| `item_id` | Barcode or item ID to renew |
+| `entity_id` | Any sensor of the account (e.g. `sensor.bibliothek_michael_loans`) |
+| `item_id` | `item_id` of the loan to renew |
 | `config_entry_id` | *(alternative to entity_id)* The config entry of the library account |
 
 **Response** (via `response_variable`): `{item_id, title, author, due_date, media_type, times_renewed, max_renewals, renewals_left, success, error}`
@@ -128,7 +147,7 @@ Renew all renewable items for a library account.
 
 | Field | Description |
 |-------|-------------|
-| `entity_id` | Any Stadtbibliothek sensor entity |
+| `entity_id` | Any sensor of the account |
 | `days_remaining_threshold` | *(optional, default 14)* Only renew items due within this many days (0-90) |
 | `config_entry_id` | *(alternative to entity_id)* The config entry of the library account |
 
@@ -140,12 +159,12 @@ Force an immediate data refresh.
 
 | Field | Description |
 |-------|-------------|
-| `entity_id` | Any Stadtbibliothek sensor entity |
+| `entity_id` | Any sensor of the account |
 | `config_entry_id` | *(alternative to entity_id)* The config entry of the library account |
 
 ## CLI
 
-Standalone command-line tools for querying and managing library loans without Home Assistant.
+Standalone command-line tools (from the original project) for the Remseck and Stuttgart presets.
 
 ### Installation
 
@@ -171,9 +190,9 @@ Replace `remseck` with `stuttgart` for Stuttgart accounts.
 
 ## Automation Examples
 
-All examples below can be pasted directly into the Home Assistant automation editor (YAML mode). Replace `sensor.stadtbibliothek_remseck_12345_*` with your actual sensor entity IDs.
+All examples below can be pasted directly into the Home Assistant automation editor (YAML mode). Replace `sensor.bibliothek_michael_*` with your actual sensor entity IDs.
 
-> **Identifying your account:** All service calls accept an `entity_id` field — pass any Stadtbibliothek sensor (loans, warning, or fees) to identify the account. You can also use `config_entry_id` directly if you prefer.
+> **Identifying your account:** All service calls accept an `entity_id` field — pass any sensor of the account (loans, warning, or fees) to identify the account. You can also use `config_entry_id` directly if you prefer.
 
 ### Notify when items are due within 3 days
 
@@ -181,16 +200,16 @@ All examples below can be pasted directly into the Home Assistant automation edi
 alias: "Library due date warning"
 trigger:
   - platform: numeric_state
-    entity_id: sensor.stadtbibliothek_remseck_12345_warning
+    entity_id: sensor.bibliothek_michael_warning
     below: 4
 action:
   - service: notify.mobile_app
     data:
       title: "Library books due soon"
       message: >
-        {{ state_attr('sensor.stadtbibliothek_remseck_12345_warning', 'items_due_soon') }}
+        {{ state_attr('sensor.bibliothek_michael_warning', 'items_due_soon') }}
         item(s) due within 7 days.
-        Earliest due: {{ state_attr('sensor.stadtbibliothek_remseck_12345_warning', 'earliest_due_date') }}
+        Earliest due: {{ state_attr('sensor.bibliothek_michael_warning', 'earliest_due_date') }}
 ```
 
 ### Send loan list via notification
@@ -206,9 +225,9 @@ condition:
 action:
   - service: notify.mobile_app
     data:
-      title: "Library loans ({{ states('sensor.stadtbibliothek_remseck_12345_loans') }})"
+      title: "Library loans ({{ states('sensor.bibliothek_michael_loans') }})"
       message: >
-        {% for loan in state_attr('sensor.stadtbibliothek_remseck_12345_loans', 'loans') %}
+        {% for loan in state_attr('sensor.bibliothek_michael_loans', 'loans') %}
         - {{ loan.title }}{% if loan.author %} ({{ loan.author }}){% endif %} — due {{ loan.due_date }}{% if loan.is_overdue %} ⚠ OVERDUE{% endif %}, {{ loan.renewals_left }} renewals left
         {% endfor %}
 ```
@@ -219,12 +238,12 @@ action:
 alias: "Auto-renew library books"
 trigger:
   - platform: numeric_state
-    entity_id: sensor.stadtbibliothek_remseck_12345_warning
+    entity_id: sensor.bibliothek_michael_warning
     below: 4
 action:
   - service: stadtbibliothek.renew_all
     data:
-      entity_id: sensor.stadtbibliothek_remseck_12345_loans
+      entity_id: sensor.bibliothek_michael_loans
       days_remaining_threshold: 3
     response_variable: renew_result
   - service: notify.mobile_app
@@ -248,14 +267,14 @@ trigger:
 action:
   - repeat:
       for_each: >
-        {{ state_attr('sensor.stadtbibliothek_remseck_12345_loans', 'loans')
+        {{ state_attr('sensor.bibliothek_michael_loans', 'loans')
            | selectattr('days_remaining', 'lt', 3)
            | selectattr('can_be_renewed')
            | list }}
       sequence:
         - service: stadtbibliothek.renew_loan
           data:
-            entity_id: sensor.stadtbibliothek_remseck_12345_loans
+            entity_id: sensor.bibliothek_michael_loans
             item_id: "{{ repeat.item.item_id }}"
           response_variable: result
         - service: notify.mobile_app
@@ -268,7 +287,7 @@ action:
 
 ### Warn about non-renewable loans due soon
 
-Notify about loans that are due within 7 days but cannot be renewed anymore — these must be returned in person. This example combines loans from both Remseck and Stuttgart accounts.
+Notify about loans that are due within 7 days but cannot be renewed anymore — these must be returned in person. This example combines the loans of two accounts.
 
 ```yaml
 alias: "Non-renewable loans due soon"
@@ -277,8 +296,8 @@ trigger:
     at: "09:00:00"
 variables:
   all_loans: >
-    {{ (state_attr('sensor.stadtbibliothek_remseck_12345_loans', 'loans') | default([], true))
-       + (state_attr('sensor.stadtbibliothek_stuttgart_67890_loans', 'loans') | default([], true)) }}
+    {{ (state_attr('sensor.bibliothek_michael_loans', 'loans') | default([], true))
+       + (state_attr('sensor.bibliothek_anna_loans', 'loans') | default([], true)) }}
   due_soon: >
     {{ all_loans
        | selectattr('days_remaining', 'lt', 7)
@@ -316,4 +335,4 @@ nix build .#checks.x86_64-linux.vm-test
 
 MIT License. See [LICENSE](LICENSE) for details.
 
-Inspired by [bibliotheek_be](https://github.com/myTselection/bibliotheek_be) by @myTselection.
+Based on [makefu/ha_stadtbibliothek](https://github.com/makefu/ha_stadtbibliothek). Originally inspired by [bibliotheek_be](https://github.com/myTselection/bibliotheek_be) by @myTselection.

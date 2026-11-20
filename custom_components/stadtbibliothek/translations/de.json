@@ -2,7 +2,7 @@
     "config": {
         "step": {
             "user": {
-                "title": "Stadtbibliothek einrichten",
+                "title": "Bibliothekskonto einrichten",
                 "description": "Zugangsdaten des Bibliothekskontos eingeben. Die URL wird nur für „Koha / LMSCloud“ verwendet (Standard: Stadtbibliothek Neumarkt).",
                 "data": {
                     "library_type": "Bibliothek",

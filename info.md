@@ -1,16 +1,10 @@
-## Stadtbibliothek
+## Bibliothek (Koha / LMSCloud)
 
-Home Assistant custom component for German public libraries.
+Home Assistant integration for **any library running Koha** – including every LMSCloud-hosted
+OPAC (`*.lmscloud.net`, e.g. Stadtbibliothek Neumarkt). Stuttgart (aDIS/BMS) is supported as well.
 
-Track loans, fees, and due dates for your library accounts. Get warnings before items are overdue and renew loans directly from Home Assistant.
-
-**Supported libraries:**
-- Stuttgart (aDIS/BMS)
-- Remseck (Koha/LMSCloud)
-
-**Features:**
-- Loan count sensor with full loan details as attributes
-- Warning sensor showing days until earliest due date
-- Fee tracking sensor
-- Services to renew individual or all loans
-- Multiple library accounts supported
+- Loans with due dates, renewability and remaining renewals – for as many library cards as you like
+- Renew single loans from Home Assistant
+- One calendar per account with all due dates
+- Built-in dashboard card: all accounts in one list, sorted by due date, with a renew button per item
+- Fees and early-warning sensors
