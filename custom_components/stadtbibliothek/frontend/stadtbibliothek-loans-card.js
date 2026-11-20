@@ -15,7 +15,7 @@
  */
 
 const DOMAIN = "stadtbibliothek";
-const CARD_VERSION = "1.5.1";
+const CARD_VERSION = "1.5.2";
 
 const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);

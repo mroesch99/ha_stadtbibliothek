@@ -77,7 +77,7 @@ Each configured account creates three sensors and a calendar:
 
 ### Warning (`sensor.*_warning`)
 
-- **State:** days until earliest due date (negative = overdue), `none` if no loans
+- **State:** days until earliest due date (negative = overdue), `unknown` if no loans
 - **Attributes:**
   - `overdue_count` -- number of overdue items
   - `items_due_soon` -- items due within 7 days

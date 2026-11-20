@@ -36,6 +36,7 @@ async def test_card_is_served_and_announced_once(monkeypatch):
     hass = MagicMock()
     hass.data = {}
     hass.http.async_register_static_paths = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(return_value="1.0.0")
 
     await async_register_card(hass)
     await async_register_card(hass)  # a second account must not register again
@@ -46,7 +47,7 @@ async def test_card_is_served_and_announced_once(monkeypatch):
     assert Path(config.path).is_file()
     frontend.add_extra_js_url.assert_called_once()
     announced = frontend.add_extra_js_url.call_args.args[1]
-    assert announced.startswith(f"{CARD_URL}?v=")
+    assert announced == f"{CARD_URL}?v=1.0.0"
 
 
 async def test_card_is_registered_when_the_integration_loads(monkeypatch):
@@ -63,6 +64,22 @@ async def test_card_is_registered_when_the_integration_loads(monkeypatch):
     hass = MagicMock()
     hass.data = {}
     hass.http.async_register_static_paths = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(return_value="1.0.0")
 
     assert await async_setup(hass, {}) is True
     hass.http.async_register_static_paths.assert_awaited_once()
+
+
+async def test_manifest_is_read_off_the_event_loop(monkeypatch):
+    """Home Assistant flags file I/O inside the event loop ("Detected
+    blocking call to read_text"); the version lookup must go through the
+    executor."""
+    _stub_frontend(monkeypatch)
+    hass = MagicMock()
+    hass.data = {}
+    hass.http.async_register_static_paths = AsyncMock()
+    hass.async_add_executor_job = AsyncMock(return_value="9.9.9")
+
+    await async_register_card(hass)
+
+    hass.async_add_executor_job.assert_awaited_once()

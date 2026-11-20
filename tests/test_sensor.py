@@ -82,13 +82,17 @@ class TestWarningSensor:
         assert value < 0  # the overdue one from 2020-01-01
 
     def test_state_none_when_no_loans(self):
+        """A sensor with a unit must report a number or None; Home Assistant
+        refuses to add one whose state is the string 'none' (ValueError:
+        "has the non-numeric value: 'none'"), which hit every account with
+        nothing on loan."""
         account = AccountInfo(username="u", library_type=LibraryType.REMSECK, loans=[], fees=[])
         sensor = _make_sensor(WarningSensor, account)
-        assert sensor.native_value == "none"
+        assert sensor.native_value is None
 
     def test_state_none_when_no_data(self):
         sensor = _make_sensor(WarningSensor, None)
-        assert sensor.native_value == "none"
+        assert sensor.native_value is None
 
     def test_overdue_icon(self, sample_account):
         sensor = _make_sensor(WarningSensor, sample_account)

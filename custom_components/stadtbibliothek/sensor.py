@@ -119,9 +119,11 @@ class WarningSensor(StadtbibliothekEntity):
         self._attr_unique_id = f"{DOMAIN}_{self._slug}_warning"
 
     @property
-    def native_value(self) -> int | str | None:
+    def native_value(self) -> int | None:
         if self._account is None or not self._account.loans:
-            return "none"
+            # None ("unknown"), not a string: the sensor has a unit, and Home
+            # Assistant rejects a non-numeric state for it outright.
+            return None
         return min(loan.days_remaining for loan in self._account.loans)
 
     @property

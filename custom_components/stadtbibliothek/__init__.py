@@ -62,6 +62,11 @@ if _HAS_HOMEASSISTANT:
     )
 
 
+def _read_version() -> str:
+    """Integration version from manifest.json (file I/O: run in the executor)."""
+    return json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
+
+
 async def async_register_card(hass: HomeAssistant) -> None:
     """Serve the dashboard card and load it on every dashboard (once per HA run).
 
@@ -79,7 +84,7 @@ async def async_register_card(hass: HomeAssistant) -> None:
         [StaticPathConfig(CARD_URL, str(_FRONTEND_DIR / CARD_FILE), cache_headers=False)]
     )
     # Version in the query string so browsers drop a cached copy on update.
-    version = json.loads((Path(__file__).parent / "manifest.json").read_text())["version"]
+    version = await hass.async_add_executor_job(_read_version)
     add_extra_js_url(hass, f"{CARD_URL}?v={version}")
 
 
